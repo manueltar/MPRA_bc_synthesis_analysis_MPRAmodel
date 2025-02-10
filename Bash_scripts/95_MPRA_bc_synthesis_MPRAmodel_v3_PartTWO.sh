@@ -1,0 +1,140 @@
+#!/bin/bash
+
+eval "$(conda shell.bash hook)"
+ 
+ 
+#### Save in a new folder, Analysis_filtered
+   
+Rscripts_path=$(echo "/home/manuel.tardaguila/Scripts/R/")
+
+MASTER_ROUTE=$1
+analysis=$2
+
+Threshold_log2FC_meta=$3 # Changed. 0.255 .In https://github.com/julirsch/finemapped_mpra/blob/main/code/preprocess/mpra_meta.R is 1.
+Threshold_FC_meta_padj=$4 # 0.01  Same as https://github.com/julirsch/finemapped_mpra/blob/main/code/preprocess/mpra_meta.R
+
+Threshold_Skew_meta_padj=$(echo '0.1') # 0.1 Same as https://github.com/julirsch/finemapped_mpra/blob/main/code/preprocess/mpra_meta.R
+
+
+echo "Threshold_log2FC_meta: $Threshold_log2FC_meta"" ""Threshold_FC_meta_padj: $Threshold_FC_meta_padj"
+
+
+
+output_dir=$(echo "$MASTER_ROUTE""$analysis""/")
+
+Log_files=$(echo "$output_dir""/""Log_files/")
+
+result=$(echo "$output_dir""/""result/")
+
+rm -rf $result
+mkdir -p $result
+
+plots=$(echo "$output_dir""/""plots/")
+
+rm -rf $plots
+mkdir -p $plots
+
+
+config_file=$(echo "$output_dir""Run_file_countsData_and_condData_filtered_plus_attributesData.tsv")
+
+declare -a arr
+
+end_of_file=0
+counter=0
+array=()
+array_Merge=()
+
+while [[ $end_of_file == 0 ]]
+do
+  read -r line
+  end_of_file=$?
+
+
+  ((counter++))
+
+#    echo "counter:$counter  LINE:$line"
+
+  if [ $counter != 1 ]; then
+
+      if [[ "$line" =~ [^[:space:]] ]]; then
+
+        a=($(echo "$line" | tr "\t" '\n'))
+
+        Cell_Type=${a[0]}
+        comparison=${a[3]}
+        countsData=${a[1]}
+        condData=${a[2]}
+	attributesData=${a[4]}
+
+
+#        echo "Cell_Type:$Cell_Type  comparison:$comparison  countsData:$countsData condData:$condData attributesData:$attributesData"
+
+	tag=$(echo "$Cell_Type""__""$comparison")
+
+	echo "------------------------------------------------------------------------------------->$tag"
+
+        # ####################################################################################################################################################################### run_MPRAmodel
+	# ####################################################################################################################################################################### run_MPRAmodel
+	# ####################################################################################################################################################################### run_MPRAmodel
+	
+
+	type=$(echo "$tag""_run_MPRAmodel")
+	outfile_run_MPRAmodel=$(echo "$Log_files""outfile_3_""$type"".log")
+	touch $outfile_run_MPRAmodel
+	echo -n "" > $outfile_run_MPRAmodel
+	name_run_MPRAmodel=$(echo "$type""_job")
+	seff_name=$(echo "seff""_""$type")
+
+
+	Rscript_run_MPRAmodel=$(echo "$Rscripts_path""324_MPRA_bc_synthesis_MPRA_model_adapted_v3.R")
+
+
+	conditions_data_extended=$(echo "$condData")
+	attributesData_single_variants=$(echo "$output_dir""sorted_attribute_data""/""attributesData_single_variants.rds")
+
+
+	myjobid_run_MPRAmodel=$(sbatch --output=$outfile_run_MPRAmodel --partition=cpuq --time=24:00:00 --nodes=1 --ntasks-per-node=4 --mem-per-cpu=4096 --parsable --job-name $name_run_MPRAmodel --wrap="Rscript $Rscript_run_MPRAmodel --countsData $countsData --attributesData $attributesData --conditions_data_extended $conditions_data_extended --Tag_sel $tag --attributesData_single_variants $attributesData_single_variants --type $type --out $output_dir")
+	myjobid_seff_run_MPRAmodel=$(sbatch --dependency=afterany:$myjobid_run_MPRAmodel --open-mode=append --output=$outfile_run_MPRAmodel --job-name=$seff_name --partition=cpuq --time=24:00:00 --nodes=1 --ntasks-per-node=1 --mem-per-cpu=128M --parsable --wrap="seff $myjobid_run_MPRAmodel >> $outfile_run_MPRAmodel
+")
+
+
+	arr[${#arr[@]}]="$myjobid_run_MPRAmodel"
+
+
+
+      fi #no spaces
+    fi #counter > 1
+done < "$config_file"
+
+done_string=$(echo "--dependency=afterany:"""""${arr[@]}"""")
+echo "$done_string"
+
+dependency_string=$(echo $done_string|sed -r 's/ /:/g')
+
+echo "$dependency_string"
+
+####### ############################ collapse_and_meta_analysis
+####### ############################ collapse_and_meta_analysis
+####### ############################ collapse_and_meta_analysis
+
+
+type=$(echo "collapse_and_meta_analysis")
+outfile_collapse_and_meta_analysis=$(echo "$Log_files""outfile_4_""$type"".log")
+touch $outfile_collapse_and_meta_analysis
+echo -n "" > $outfile_collapse_and_meta_analysis
+name_collapse_and_meta_analysis=$(echo "$type""_job")
+seff_name=$(echo "seff""_""$type")
+
+
+Rscript_collapse_and_meta_analysis=$(echo "$Rscripts_path""325_MPRA_bc_synthesis_Global_meta_analysis_v5.R")
+
+NCGR=$(echo 'Element_87,Element_88,Element_89,Element_90')
+ASE_CTRL=$(echo 'Element_1,Element_15,Element_16,Element_26,Element_42,Element_49,Element_64')
+Enhancer_CTRL=$(echo 'Element_14,Element_21,Element_3,Element_30,Element_35,Element_51,Element_56,Element_57,Element_63,Element_65')
+
+
+# $dependency_string
+
+myjobid_collapse_and_meta_analysis=$(sbatch $dependency_string --output=$outfile_collapse_and_meta_analysis --partition=cpuq --time=24:00:00 --nodes=1 --ntasks-per-node=4 --mem-per-cpu=1024 --parsable --job-name $name_collapse_and_meta_analysis --wrap="Rscript $Rscript_collapse_and_meta_analysis --Threshold_log2FC_meta $Threshold_log2FC_meta --Threshold_FC_meta_padj $Threshold_FC_meta_padj --Threshold_Skew_meta_padj $Threshold_Skew_meta_padj --NCGR $NCGR --ASE_CTRL $ASE_CTRL --Enhancer_CTRL $Enhancer_CTRL --type $type --out $output_dir")
+myjobid_seff_collapse_and_meta_analysis=$(sbatch --dependency=afterany:$myjobid_collapse_and_meta_analysis --open-mode=append --output=$outfile_collapse_and_meta_analysis --job-name=$seff_name --partition=cpuq --time=24:00:00 --nodes=1 --ntasks-per-node=1 --mem-per-cpu=128M --parsable --wrap="seff $myjobid_collapse_and_meta_analysis >> $outfile_collapse_and_meta_analysis")
+ 
