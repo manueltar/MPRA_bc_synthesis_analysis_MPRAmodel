@@ -138,3 +138,29 @@ Enhancer_CTRL=$(echo 'Element_14,Element_21,Element_3,Element_30,Element_35,Elem
 myjobid_collapse_and_meta_analysis=$(sbatch $dependency_string --output=$outfile_collapse_and_meta_analysis --partition=cpuq --time=24:00:00 --nodes=1 --ntasks-per-node=4 --mem-per-cpu=1024 --parsable --job-name $name_collapse_and_meta_analysis --wrap="Rscript $Rscript_collapse_and_meta_analysis --Threshold_log2FC_meta $Threshold_log2FC_meta --Threshold_FC_meta_padj $Threshold_FC_meta_padj --Threshold_Skew_meta_padj $Threshold_Skew_meta_padj --NCGR $NCGR --ASE_CTRL $ASE_CTRL --Enhancer_CTRL $Enhancer_CTRL --type $type --out $output_dir")
 myjobid_seff_collapse_and_meta_analysis=$(sbatch --dependency=afterany:$myjobid_collapse_and_meta_analysis --open-mode=append --output=$outfile_collapse_and_meta_analysis --job-name=$seff_name --partition=cpuq --time=24:00:00 --nodes=1 --ntasks-per-node=1 --mem-per-cpu=128M --parsable --wrap="seff $myjobid_collapse_and_meta_analysis >> $outfile_collapse_and_meta_analysis")
  
+
+#### Add_VAR #############################
+
+
+type=$(echo "Add_VAR""_""$analysis")
+outfile_Add_VAR=$(echo "$Log_files""outfile_5_""$type"".log")
+touch $outfile_Add_VAR
+echo -n "" > $outfile_Add_VAR
+name_Add_VAR=$(echo "$type""_job")
+seff_name=$(echo "seff""_""$type")
+
+Rscript_Add_VAR=$(echo "$Rscripts_path""368_MPRA_endpoint_files_v4.R")
+
+Table_S6=$(echo "/group/soranzo/manuel.tardaguila/Paper_bits/FIX_TABLES/Provisional_Tables/Table_S6_Provisional.rds")
+
+MPRA_alignment_results=$(echo "/group/soranzo/manuel.tardaguila/MPRA_explore_results/Alingment_check/MPRA_bc_synthesis_check_reconstruct_from_alignment.rds")
+MPRA_result_SNP_and_CT=$(echo "$output_dir""collapsed_results/""MPRA_results_meta_analysis_collapsed_by_SNP_and_Cell_Type_Threshold_log2FC_""$Threshold_log2FC_meta""_Threshold_FC_meta_padj_""$Threshold_FC_meta_padj"".rds")
+MPRA_prior_to_meta_analysis=$(echo "$output_dir""collapsed_results/""MPRA_results_prior_to_meta_analysis.tsv")
+
+
+myjobid_Add_VAR=$(sbatch --dependency=afterany:$myjobid_collapse_and_meta_analysis --job-name=$name_Add_VAR --output=$outfile_Add_VAR --partition=cpuq --time=24:00:00 --nodes=1 --ntasks-per-node=1 --mem-per-cpu=512M --parsable --wrap="Rscript $Rscript_Add_VAR --Table_S6 $Table_S6 --MPRA_alignment_results $MPRA_alignment_results --MPRA_result_SNP_and_CT $MPRA_result_SNP_and_CT --MPRA_prior_to_meta_analysis $MPRA_prior_to_meta_analysis --type $type --out $output_dir")
+myjobid_seff_Add_VAR=$(sbatch --dependency=afterany:$myjobid_Add_VAR --open-mode=append --output=$outfile_Add_VAR --job-name=$seff_name --partition=cpuq --time=24:00:00 --nodes=1 --ntasks-per-node=1 --mem-per-cpu=128M --parsable --wrap="seff $myjobid_Add_VAR >> $outfile_Add_VAR")
+
+
+
+
