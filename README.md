@@ -21,4 +21,8 @@ Error in rbind(deparse.level, ...) :
 Calls: system.time -> main -> violin_Activity -> rbind -> rbind
 
 
++ there are NAs in Table S3 generated de novo in the VAR field of the table
+
 ######################## SAVE everything when fixed and repush to github
+ 
+-----------------> Jupyter notebook: /group/soranzo/manuel.tardaguila/Rebuild_sit_plots/test/Figure_4_and_Figure_S4_MPRA_snippet_plots.ipynb
